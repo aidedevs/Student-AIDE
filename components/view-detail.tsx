@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { ColorSpace } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
@@ -26,7 +27,7 @@ const HEADER_HEIGHT = Platform.OS === "ios" ? 44 : 56;
 const STATUS_BAR_TRANSITION_THRESHOLD = BANNER_HEIGHT - HEADER_HEIGHT - 30;
 
 interface DataProps {
-  image: ImageSourcePropType;
+  image: string | undefined;
   title: string;
   children: React.ReactNode;
   onPress?: () => void;
@@ -107,7 +108,6 @@ export default function ViewDetailPage({
         backgroundColor="transparent"
         barStyle={statusBarStyle}
       />
-
       <AnimatedHeader />
 
       <Animated.View
@@ -120,10 +120,26 @@ export default function ViewDetailPage({
           },
         ]}
       >
-        <Image
-          source={image}
-          style={[styles.headerImage, { height: BANNER_HEIGHT + insets.top }]}
-        />
+        {image ? (
+          <Image
+            source={{ uri: image! }}
+            style={[styles.headerImage, { height: BANNER_HEIGHT + insets.top }]}
+          />
+        ) : (
+          <View
+            style={[
+              styles.headerImage,
+              {
+                height: BANNER_HEIGHT + insets.top,
+                backgroundColor: Colors.primaryDark,
+              },
+            ]}
+          >
+            <View style={styles.noImage}>
+              <Text style={styles.noImageText}>{title}</Text>
+            </View>
+          </View>
+        )}
       </Animated.View>
 
       {(isScrollingDown || scrollY?._value < 50) && (
@@ -158,12 +174,11 @@ export default function ViewDetailPage({
           </TouchableOpacity>
           {lastScrollY.current > STATUS_BAR_TRANSITION_THRESHOLD && (
             <Text numberOfLines={1} style={styles.bigTitle}>
-              {title?.slice(0, 28)}...
+              {title?.length > 28 ? title?.slice(0, 28) + "..." : title}
             </Text>
           )}
         </Animated.View>
       )}
-
       <Animated.ScrollView
         onScroll={handleScroll}
         scrollEventThrottle={16}
@@ -246,5 +261,18 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 8,
+  },
+  noImage: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#00000010",
+  },
+  noImageText: {
+    textAlign: "center",
+    fontSize: 26,
+    fontWeight: "bold",
+    color: Colors.white,
   },
 });

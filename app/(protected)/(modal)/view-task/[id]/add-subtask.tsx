@@ -13,7 +13,11 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/Colors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import CustomButton from "@/components/button";
+import { Id } from "@/convex/_generated/dataModel";
 
 interface FormErrors {
   title?: string;
@@ -28,15 +32,18 @@ interface TaskForm {
 }
 
 const AddSubTaskPage: React.FC = () => {
+  const { id } = useLocalSearchParams();
   const router = useRouter();
   const [form, setForm] = useState<TaskForm>({
     title: "",
     due_date: new Date(),
     description: "",
   });
+  const createSubTask = useMutation(api.tasks.addNewSubTask);
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -59,6 +66,7 @@ const AddSubTaskPage: React.FC = () => {
     }
 
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     if (form.due_date < today) {
       newErrors.due_date = "Date cannot be in the past";
       isValid = false;
@@ -68,13 +76,25 @@ const AddSubTaskPage: React.FC = () => {
     return isValid;
   };
 
-  const handleSubmit = () => {
-    if (validateForm()) {
-      console.log("Form submitted:", form);
-      Alert.alert("Success", "Task created successfully!");
-      // Here you would typically send the data to your backend
-    } else {
-      Alert.alert("Error", "Please fix the errors in the form");
+  const handleSubmit = async () => {
+    try {
+      if (validateForm()) {
+        setIsLoading(true);
+        await createSubTask({
+          title: form.title,
+          taskId: id as Id<"tasks">,
+          due_date: new Date(form?.due_date).getTime().toString(),
+          description: form.description,
+        });
+        setIsLoading(false);
+        router.dismiss();
+      } else {
+        Alert.alert("Error", "Please all required fields.");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Something went wrong");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -152,9 +172,11 @@ const AddSubTaskPage: React.FC = () => {
         )}
       </View>
 
-      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-        <Text style={styles.submitButtonText}>Add Task</Text>
-      </TouchableOpacity>
+      <CustomButton
+        label="Add Task"
+        onPress={handleSubmit}
+        isLoading={isLoading}
+      />
     </ScrollView>
   );
 };

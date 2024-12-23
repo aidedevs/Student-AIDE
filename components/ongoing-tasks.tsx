@@ -1,11 +1,15 @@
 import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { TaskCard } from "./Taskcard";
-import { taskData } from "@/assets/dummyData";
+
+import { TaskCardProps } from "@/app/(protected)/(tabs)/tasks";
+import { api } from "@/convex/_generated/api";
+import { useQuery } from "convex/react";
+import { TaskCard } from "./task-card";
 
 export const OngoingTask = () => {
-  const data = taskData.slice(0, 3);
+  const data = useQuery(api.tasks.getUserOngoingTasks);
 
+  // if (!data) return;
   return (
     <ScrollView
       contentContainerStyle={styles.container}
@@ -13,7 +17,7 @@ export const OngoingTask = () => {
       showsHorizontalScrollIndicator={false}
     >
       {data?.map((el, id) => {
-        const item = { ...el, index: id };
+        const item = { ...(el as TaskCardProps), index: id };
         return (
           <View key={id}>
             <TaskCard {...item} />

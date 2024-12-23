@@ -10,10 +10,13 @@ const article = require("./icons/article.png");
 const poem = require("./icons/peom.png");
 const achievement = require("./icons/achievement.png");
 const linearBg = require("./images/linear-bg.png");
+const NoData = require("./icons/no-data.png");
+
 export const icons = {
   article,
   poem,
   achievement,
+  NoData,
 };
 
 const images = {

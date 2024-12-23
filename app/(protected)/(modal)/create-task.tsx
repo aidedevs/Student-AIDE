@@ -14,6 +14,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/Colors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import CustomButton from "@/components/button";
 
 interface FormErrors {
   title?: string;
@@ -38,9 +41,11 @@ const NewTaskScreen: React.FC = () => {
     due_date: new Date(),
     description: "",
   });
+  const createTask = useMutation(api.tasks.addNewTask);
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -77,13 +82,25 @@ const NewTaskScreen: React.FC = () => {
     return isValid;
   };
 
-  const handleSubmit = () => {
-    if (validateForm()) {
-      console.log("Form submitted:", form);
-      Alert.alert("Success", "Task created successfully!");
-      // Here you would typically send the data to your backend
-    } else {
-      Alert.alert("Error", "Please fix the errors in the form");
+  const handleSubmit = async () => {
+    try {
+      if (validateForm()) {
+        setIsLoading(true);
+        await createTask({
+          title: form.title,
+          priority: form.priority,
+          due_date: new Date(form?.due_date).getTime().toString(),
+          description: form.description,
+        });
+        setIsLoading(false);
+        router.dismiss();
+      } else {
+        Alert.alert("Error", "Please all required fields.");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Something went wrong");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -178,9 +195,11 @@ const NewTaskScreen: React.FC = () => {
         )}
       </View>
 
-      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-        <Text style={styles.submitButtonText}>Post Task</Text>
-      </TouchableOpacity>
+      <CustomButton
+        label="Create Task"
+        onPress={handleSubmit}
+        isLoading={isLoading}
+      />
     </ScrollView>
   );
 };

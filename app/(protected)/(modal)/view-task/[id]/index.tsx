@@ -3,10 +3,11 @@ import {
   checkDueTaskDate,
   getFormattedFullDate,
 } from "@/utils";
-import { AntDesign, Ionicons } from "@expo/vector-icons";
+import { AntDesign } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -16,9 +17,14 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { taskData } from "@/assets/dummyData";
+import BackButton from "@/components/back-button";
 import { Colors } from "@/constants/Colors";
 import Theme from "@/constants/Theme";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { useQuery } from "convex/react";
+import { StatusBar } from "expo-status-bar";
+import Loader from "@/components/loader";
 
 const Page = () => {
   const { id } = useLocalSearchParams();
@@ -26,9 +32,20 @@ const Page = () => {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
 
-  const [data, setData] = useState(taskData.find((el) => el.id === id));
-  const taskProgress = calculateProgress({ ...data! });
-  const dueDate = checkDueTaskDate(data?.due_date!);
+  const task = useQuery(api.tasks.getTaskById, { taskId: id as Id<"tasks"> });
+
+  if (!task)
+    return (
+      <View>
+        <Loader />
+      </View>
+    );
+
+  const taskProgress = calculateProgress({ ...task! });
+  const due_date = new Date(Number(task?.due_date));
+
+  const dueDate = checkDueTaskDate(new Date(due_date));
+  const createdAt = new Date(task?._creationTime!).toString();
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -38,7 +55,8 @@ const Page = () => {
   };
 
   const renderItem = ({ item }: { item: any }) => {
-    const dueDate = checkDueTaskDate(item?.due_date);
+    const due_Date = new Date(Number(item?.due_date));
+    const dueDate = checkDueTaskDate(new Date(due_Date));
 
     return (
       <TouchableOpacity style={styles.cardContainer} activeOpacity={0.8}>
@@ -67,7 +85,7 @@ const Page = () => {
                   item?.completed && { color: "#008000" },
                 ]}
               >
-                Due {getFormattedFullDate(item?.due_date)}
+                Due {getFormattedFullDate(item.due_date!)}
               </Text>
             </View>
 
@@ -94,14 +112,7 @@ const Page = () => {
           headerStyle: {
             backgroundColor: "#faf6ff",
           },
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={[styles.backButtonContainer]}
-            >
-              <Ionicons name="arrow-back" size={24} color={Colors.black} />
-            </TouchableOpacity>
-          ),
+          headerLeft: () => <BackButton onPress={() => router.back()} />,
           headerRight: () => (
             <TouchableOpacity>
               <Text>Mark Completed</Text>
@@ -112,8 +123,8 @@ const Page = () => {
       <FlatList
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-        data={data?.subTasks}
-        keyExtractor={(item) => item.id}
+        data={task?.subTasks}
+        keyExtractor={(item) => item?._id}
         renderItem={renderItem}
         ListHeaderComponent={
           <>
@@ -126,14 +137,14 @@ const Page = () => {
                       taskProgress === 100
                         ? "green"
                         : taskProgress > 60
-                        ? "blue"
-                        : taskProgress > 0
-                        ? "orange"
-                        : "red",
+                          ? "blue"
+                          : taskProgress > 0
+                            ? "orange"
+                            : "red",
                   },
                 ]}
               />
-              <Text style={styles.bigTitle}>{data?.title}</Text>
+              <Text style={styles.bigTitle}>{task?.title}</Text>
 
               <View
                 style={[
@@ -143,10 +154,10 @@ const Page = () => {
                       taskProgress === 100
                         ? "green"
                         : taskProgress > 60
-                        ? "blue"
-                        : taskProgress > 0
-                        ? "orange"
-                        : "red",
+                          ? "blue"
+                          : taskProgress > 0
+                            ? "orange"
+                            : "red",
                   },
                 ]}
               >
@@ -159,10 +170,10 @@ const Page = () => {
                         taskProgress === 100
                           ? "green"
                           : taskProgress > 60
-                          ? "blue"
-                          : taskProgress > 0
-                          ? "orange"
-                          : "red",
+                            ? "blue"
+                            : taskProgress > 0
+                              ? "orange"
+                              : "red",
                     },
                   ]}
                 >
@@ -179,37 +190,37 @@ const Page = () => {
                     style={[
                       styles.infoValue,
                       dueDate < 0 &&
-                        !data?.completed && {
+                        !task?.completed && {
                           color: "#FF0000",
                           fontWeight: "bold",
                         },
                     ]}
                   >
-                    {getFormattedFullDate(data?.due_date!)}
+                    {getFormattedFullDate(task?.due_date!)}
                   </Text>
                 </View>
                 <View style={styles.infoContainer}>
                   <Text style={styles.infoText}>Created On</Text>
                   <Text style={styles.infoValue}>
-                    {getFormattedFullDate(data?.created_at!)}
+                    {getFormattedFullDate(new Date(createdAt))}
                   </Text>
                 </View>
                 <View style={styles.infoContainer}>
                   <Text style={styles.infoText}>Priority</Text>
                   <Text style={[styles.infoValue, styles.priority]}>
-                    {data?.priority}
+                    {task?.priority}
                   </Text>
                 </View>
               </View>
 
               <View style={styles.info}>
-                <Text style={styles.paragraph}>{data?.description}</Text>
+                <Text style={styles.paragraph}>{task?.description}</Text>
               </View>
             </View>
 
             <View style={styles.subContainer}>
               <Text style={styles.subTitle}>Sub-Tasks</Text>
-              <Text style={styles.subCount}>{data?.subTasks?.length}</Text>
+              <Text style={styles.subCount}>{task?.subTasks?.length || 0}</Text>
             </View>
           </>
         }
@@ -217,7 +228,7 @@ const Page = () => {
           <View>
             <TouchableOpacity
               onPress={() =>
-                router.push(`(modal)/view-task/${data?.id}/add-subtask`)
+                router.push(`/(modal)/view-task/${task?._id}/add-subtask`)
               }
               style={styles.addSubTask}
             >
@@ -245,6 +256,7 @@ const Page = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       />
+      <StatusBar backgroundColor="white" style="dark" />
     </>
   );
 };
@@ -252,14 +264,6 @@ const Page = () => {
 export default Page;
 
 const styles = StyleSheet.create({
-  backButtonContainer: {
-    padding: 4,
-    borderRadius: Theme.BORDER_RADIUS.full,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: Colors.white,
-    marginRight: 10,
-  },
   headerContainer: {
     flexDirection: "row",
     alignItems: "flex-start",

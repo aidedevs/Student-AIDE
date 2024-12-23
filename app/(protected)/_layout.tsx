@@ -23,7 +23,7 @@ const ProtectedLayout = () => {
           }}
         />
         <Stack.Screen
-          name="(modal)/[id]/index"
+          name="(modal)/student-center/[id]/index"
           options={{ title: "", presentation: "modal", headerShown: false }}
         />
         <Stack.Screen
@@ -38,6 +38,33 @@ const ProtectedLayout = () => {
           name="(modal)/view-task/[id]/add-subtask"
           options={{ title: "", presentation: "modal", headerShown: false }}
         />
+        <Stack.Screen
+          name="(modal)/notification"
+          options={{ title: "", presentation: "modal", headerShown: false }}
+        />
+        <Stack.Screen
+          name="(modal)/resource/index"
+          options={{ title: "", presentation: "modal", headerShown: false }}
+        />
+        <Stack.Screen
+          name="(modal)/help"
+          options={{ title: "", presentation: "modal", headerShown: false }}
+        />
+        <Stack.Screen
+          name="(modal)/setting-privacy"
+          options={{ title: "", presentation: "modal", headerShown: false }}
+        />
+
+        <Stack.Screen
+          name="(modal)/edit-profile"
+          options={{ title: "", presentation: "modal", headerShown: false }}
+        />
+        <Stack.Screen
+          name="(modal)/feedback"
+          options={{ title: "", presentation: "modal", headerShown: false }}
+        />
+        <Stack.Screen name="writers" options={{ headerShown: false }} />
+        <Stack.Screen name="search" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="dark" backgroundColor="white" />
     </>

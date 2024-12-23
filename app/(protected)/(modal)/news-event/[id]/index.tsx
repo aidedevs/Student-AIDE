@@ -1,136 +1,97 @@
-import { eventsData, newsData } from "@/assets/dummyData";
 import ViewDetailPage from "@/components/view-detail";
 import { Colors } from "@/constants/Colors";
 import Theme from "@/constants/Theme";
-import {
-  formatDateTime,
-  getFormattedDate,
-  getFormattedFullDate,
-} from "@/utils";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { formatDateTime, getFormattedFullDate } from "@/utils";
 import { AntDesign, Feather, FontAwesome6 } from "@expo/vector-icons";
+import { useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-interface NewsProps {
-  id?: string | number;
-  created_at: Date;
-  content: string;
-}
-const NewsView = ({ id, content, created_at }: NewsProps) => {
+const NewsView = ({ id }: { id: string }) => {
+  const router = useRouter();
+  const data = useQuery(api.news.getNewsById, {
+    id: id as Id<"news">,
+  });
+  if (!data) return null;
+
+  const { _id, title, content, _creationTime } = data;
+  const createdAt = new Date(_creationTime).toString();
+
   return (
-    <View>
-      <Text style={styles.metadata}>
-        Posted on {formatDateTime(created_at)}
-      </Text>
-      <Text style={styles.paragraph}>{content}</Text>
-      <Text style={styles.paragraph}>
-        Duis aute irure dolor in reprehenderit in voluptate velit esse cillum
-        dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-        proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
-        tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
-        veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
-        commodo consequat. Lorem ipsum dolor sit amet, consectetur adipiscing
-        elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-        Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi
-        ut aliquip ex ea commodo consequat. Lorem ipsum dolor sit amet,
-        consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore
-        et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-        exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
-        tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
-        veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
-        commodo consequat. Lorem ipsum dolor sit amet, consectetur adipiscing
-        elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-        Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi
-        ut aliquip ex ea commodo consequat. Lorem ipsum dolor sit amet,
-        consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore
-        et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-        exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-      </Text>
-    </View>
+    <ViewDetailPage
+      title={data?.title}
+      image={data?.images[0]!}
+      onPress={() => router.dismiss()}
+    >
+      <View>
+        <Text style={styles.metadata}>
+          Posted on {formatDateTime(new Date(createdAt)).toString()}
+        </Text>
+        <Text style={styles.paragraph}>{content}</Text>
+      </View>
+    </ViewDetailPage>
   );
 };
 
-interface EventProps {
-  id?: string | number;
-  activity_date: Date;
-  content: string;
-  category: string;
-  location: string;
-  organize_by: string;
-}
-const EventView = ({
-  id,
-  content,
-  activity_date,
-  location,
-  organize_by,
-  category,
-}: EventProps) => {
-  return (
-    <View>
-      <View style={styles.topContainer}>
-        <View style={styles.dateContainer}>
-          <Feather name="calendar" size={20} color="#3C096C" />
-          <Text style={styles.date}>{getFormattedFullDate(activity_date)}</Text>
-        </View>
-        <View style={styles.dateContainer}>
-          <AntDesign name="rightcircleo" size={16} color="#3C096C" />
-          <Text style={styles.date}>{category}</Text>
-        </View>
-        <View style={styles.dateContainer}>
-          <FontAwesome6 name="location-dot" size={20} color="#3C096C" />
-          <Text style={styles.date}>{location}</Text>
-        </View>
-        <View style={styles.dateContainer}>
-          <FontAwesome6 name="users" size={20} color="#3C096C" />
-          <Text style={styles.date}>{organize_by}</Text>
-        </View>
-      </View>
+const EventView = ({ id }: { id: string }) => {
+  const router = useRouter();
+  const data = useQuery(api.events.getEventById, {
+    eventId: id as Id<"activities">,
+  });
 
-      <View style={styles.contentContainer}>
-        <Text style={styles.paragraph}>{content}</Text>
+  if (!data) return null;
+
+  const { _id, description, activity_date, location, organized_by, category } =
+    data;
+
+  return (
+    <ViewDetailPage
+      title={data?.title!}
+      image={data?.image!}
+      onPress={() => router.dismiss()}
+    >
+      <View>
+        <View style={styles.topContainer}>
+          <View style={styles.dateContainer}>
+            <Feather name="calendar" size={20} color="#3C096C" />
+            <Text style={styles.date}>
+              {getFormattedFullDate(new Date(activity_date!))}
+            </Text>
+          </View>
+          <View style={styles.dateContainer}>
+            <AntDesign name="rightcircleo" size={16} color="#3C096C" />
+            <Text style={styles.date}>{category}</Text>
+          </View>
+          <View style={styles.dateContainer}>
+            <FontAwesome6 name="location-dot" size={20} color="#3C096C" />
+            <Text style={styles.date}>{location}</Text>
+          </View>
+          <View style={styles.dateContainer}>
+            <FontAwesome6 name="users" size={20} color="#3C096C" />
+            <Text style={styles.date}>{organized_by}</Text>
+          </View>
+        </View>
+
+        <View style={styles.contentContainer}>
+          <Text style={styles.paragraph}>{description}</Text>
+        </View>
       </View>
-    </View>
+    </ViewDetailPage>
   );
 };
 
 export default function Page() {
   const { id, cat } = useLocalSearchParams();
 
-  const data: any =
-    cat === "news"
-      ? newsData.find((el) => el.id === id)
-      : eventsData.find((el) => el.id === id);
-  const router = useRouter();
-
   return (
-    <ViewDetailPage
-      image={data?.image}
-      title={data?.title!}
-      onPress={() => router.back()}
-    >
-      {cat === "news" && (
-        <NewsView
-          id={data?.id}
-          content={data?.description!}
-          created_at={new Date(data?.created_at!)}
-        />
-      )}
+    <>
+      {cat === "news" && <NewsView id={id as string} />}
 
-      {cat === "event" && (
-        <EventView
-          id={data?.id}
-          content={data?.description!}
-          activity_date={new Date(data?.activity_date!)}
-          location={data?.location!}
-          organize_by={data?.organize_by!}
-          category={data?.category}
-        />
-      )}
-    </ViewDetailPage>
+      {cat === "event" && <EventView id={id as string} />}
+    </>
   );
 }
 

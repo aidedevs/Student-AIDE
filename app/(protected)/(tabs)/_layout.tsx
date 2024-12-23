@@ -5,18 +5,30 @@ import {
   Ionicons,
   MaterialCommunityIcons,
 } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Tabs, useFocusEffect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
+import React, { useCallback } from "react";
 import { StyleSheet } from "react-native";
 
 const TabLayout = () => {
+  // useFocusEffect(React.useCallback(() => {}, []));
   return (
     <>
       <Tabs
         screenOptions={{
           tabBarShowLabel: false,
           tabBarActiveTintColor: Colors.primary,
+          tabBarStyle: {
+            backgroundColor: Colors.white,
+
+            // borderTopColor: Colors.lightGray,
+            // borderTopWidth: 1,
+            // paddingVertical: 10,
+            // paddingHorizontal: 15,
+            // justifyContent: "space-around",
+            alignItems: "center",
+            height: 60,
+          },
         }}
       >
         <Tabs.Screen
@@ -88,7 +100,6 @@ const TabLayout = () => {
           }}
         />
       </Tabs>
-      <StatusBar style="dark" backgroundColor="white" />
     </>
   );
 };

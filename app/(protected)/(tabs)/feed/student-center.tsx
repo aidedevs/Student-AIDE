@@ -1,29 +1,55 @@
+import { usePaginatedQuery } from "convex/react";
 import { useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { achievementData, studentCenterData } from "@/assets/dummyData";
-import { renderAchievementCard, renderArticleCard } from "@/components/cards";
+import { AchievementCard, PostCard } from "@/components/cards";
 import Header from "@/components/header";
 import { HeaderTitle } from "@/components/header-title";
 import { Colors } from "@/constants/Colors";
+import { api } from "@/convex/_generated/api";
+import { Doc } from "@/convex/_generated/dataModel";
+import NoDataFound from "@/components/no-data-found";
+import Loader from "@/components/loader";
 
 const StudentCenter = () => {
   const { cat } = useLocalSearchParams();
   const { top } = useSafeAreaInsets();
-  const [data, setData] = useState(
-    cat === "Achievement" ? achievementData : studentCenterData
+  const { results, isLoading, loadMore } = usePaginatedQuery(
+    api.studentCenter.getPosts,
+    { category: cat as string },
+    { initialNumItems: 5 }
   );
+  const [refreshing, setRefreshing] = useState(false);
 
+  const onLoadMore = () => {
+    loadMore(5);
+  };
+  const onRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 2000);
+  };
   return (
     <FlatList
       scrollEventThrottle={16}
       showsVerticalScrollIndicator={false}
-      data={data}
-      keyExtractor={(item) => item.id}
-      renderItem={
-        cat === "Achievement" ? renderAchievementCard : renderArticleCard
+      onEndReached={onLoadMore}
+      onEndReachedThreshold={0.5}
+      data={results}
+      keyExtractor={(item) => item._id}
+      renderItem={({ item }) =>
+        cat === "Achievement" ? (
+          <AchievementCard
+            post={item as Doc<"studentCenters"> & { creator: Doc<"users"> }}
+          />
+        ) : (
+          <PostCard
+            post={item as Doc<"studentCenters"> & { creator: Doc<"users"> }}
+          />
+        )
       }
       ListHeaderComponent={
         <>
@@ -44,7 +70,13 @@ const StudentCenter = () => {
         paddingVertical: top,
         padding: 20,
         backgroundColor: Colors.white,
+        flexGrow: 1,
       }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+      ListEmptyComponent={isLoading ? <></> : <NoDataFound />}
+      ListFooterComponent={isLoading ? <Loader /> : <></>}
     />
   );
 };

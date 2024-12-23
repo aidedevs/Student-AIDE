@@ -2,7 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -10,27 +12,71 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { taskData } from "@/assets/dummyData";
 import Header from "@/components/header";
 import { HeaderTitle } from "@/components/header-title";
+import NoDataFound from "@/components/no-data-found";
 import { Colors } from "@/constants/Colors";
 import Theme from "@/constants/Theme";
+import { api } from "@/convex/_generated/api";
 import { calculateProgress, getFormattedFullDate } from "@/utils";
+import { usePaginatedQuery } from "convex/react";
+import { StatusBar } from "expo-status-bar";
+import { Doc, Id } from "@/convex/_generated/dataModel";
+import Loader from "@/components/loader";
+
+interface SubTasks {
+  _id: Id<"subTasks">;
+  taskId: Id<"tasks">;
+  title: string;
+  description?: string;
+  due_date?: string;
+  completed: boolean;
+  _creationTime: number;
+}
+
+export interface TaskCardProps {
+  _id: Id<"tasks">;
+  title: string;
+  description?: string;
+  due_date?: string;
+  completed: boolean;
+  subTasks?: SubTasks[];
+  _creationTime: number;
+  priority?: string;
+}
 
 const TasksPage = () => {
   const { top } = useSafeAreaInsets();
   const router = useRouter();
-  const [data, setData] = useState(taskData);
 
-  const renderItem = ({ item }: { item: any }) => {
+  const { results, status, loadMore, isLoading } = usePaginatedQuery(
+    api.tasks.getUserTasks,
+    {},
+    { initialNumItems: 5 }
+  );
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onLoadMore = () => {
+    loadMore(5);
+  };
+  const onRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 2000);
+  };
+
+  const renderItem = ({ item }: { item: TaskCardProps }) => {
     const progress = calculateProgress({
       completed: item?.completed,
-      subTasks: item?.subTasks,
+      subTasks: item?.subTasks || [],
     });
+    const dueDate = new Date(Number(item?.due_date));
+
     return (
       <TouchableOpacity
         style={styles.cardContainer}
-        onPress={() => router.push(`(modal)/view-task/${item?.id}`)}
+        onPress={() => router.push(`/(modal)/view-task/${item?._id}`)}
       >
         <View style={styles.topContainer}>
           <View style={styles.priorityContainer}>
@@ -42,13 +88,13 @@ const TasksPage = () => {
           <View style={styles.infoTags}>
             <View style={styles.tagsContainer}>
               <Text style={[styles.tagText]}>
-                Due {getFormattedFullDate(item?.due_date)}
+                Due {getFormattedFullDate(new Date(dueDate))}
               </Text>
             </View>
-            {item?.subTasks?.length > 0 && (
+            {item?.subTasks && item?.subTasks?.length > 0 && (
               <View style={styles.tagsContainer}>
                 <Text style={[styles.tagText]}>
-                  {item?.subTasks.length} Sub-Tasks
+                  {item?.subTasks?.length} Sub-Tasks
                 </Text>
               </View>
             )}
@@ -71,34 +117,45 @@ const TasksPage = () => {
   };
 
   return (
-    <FlatList
-      scrollEventThrottle={16}
-      showsVerticalScrollIndicator={false}
-      data={data}
-      keyExtractor={(item) => item.id}
-      renderItem={renderItem}
-      ListHeaderComponent={
-        <>
-          <Header isHome={false} />
-          <View style={styles.header}>
-            <HeaderTitle title="My Tasks" />
-            <TouchableOpacity
-              style={styles.task}
-              onPress={() => router.push("/(protected)/(modal)/create-task")}
-            >
-              <Ionicons name="checkbox" size={24} color="black" />
-              <Text style={styles.taskText}>New Task</Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      }
-      contentContainerStyle={{
-        paddingVertical: top,
-        padding: 20,
-        backgroundColor: Colors.white1,
-        gap: 16,
-      }}
-    />
+    <>
+      <FlatList
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        data={results as TaskCardProps[]}
+        keyExtractor={(item) => item?._id}
+        renderItem={renderItem}
+        onEndReached={onLoadMore}
+        onEndReachedThreshold={0.5}
+        ListHeaderComponent={
+          <>
+            <Header isHome={false} />
+            <View style={styles.header}>
+              <HeaderTitle title="My Tasks" />
+              <TouchableOpacity
+                style={styles.task}
+                onPress={() => router.push("/(protected)/(modal)/create-task")}
+              >
+                <Ionicons name="checkbox" size={24} color="black" />
+                <Text style={styles.taskText}>New Task</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        }
+        contentContainerStyle={{
+          paddingVertical: top,
+          padding: 20,
+          backgroundColor: Colors.white1,
+          gap: 16,
+          flexGrow: 1,
+        }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListEmptyComponent={isLoading ? <></> : <NoDataFound />}
+        ListFooterComponent={isLoading ? <Loader /> : <></>}
+      />
+      <StatusBar backgroundColor="transparent" style="dark" />
+    </>
   );
 };
 

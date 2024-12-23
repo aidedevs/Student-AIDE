@@ -3,7 +3,7 @@ import React from "react";
 
 const GradesPage = () => {
   return (
-    <View>
+    <View style={{ flex: 1, backgroundColor: "white" }}>
       <Text>GradesPage</Text>
     </View>
   );

@@ -10,7 +10,7 @@ const Layout = () => {
         <Stack.Screen name="index" />
         <Stack.Screen name="student-center" />
       </Stack>
-      <StatusBar style="dark" backgroundColor="white" />
+      <StatusBar style="dark" backgroundColor="#fff" />
     </>
   );
 };

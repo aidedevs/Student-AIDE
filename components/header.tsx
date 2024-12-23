@@ -1,7 +1,9 @@
 import images from "@/assets";
 import { Colors } from "@/constants/Colors";
 import Theme from "@/constants/Theme";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { getFormattedDate } from "@/utils";
+import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
 import React from "react";
@@ -11,10 +13,12 @@ export const Avatar = ({
   url,
   isHome,
   size,
+  isUri = true,
 }: {
   url: string;
   isHome?: boolean;
   size?: number;
+  isUri?: boolean;
 }) => {
   return (
     <View
@@ -24,12 +28,17 @@ export const Avatar = ({
         size ? { width: size, height: size, borderWidth: 2 } : {},
       ]}
     >
-      <Image source={images.user} style={styles.profile} />
+      <Image
+        source={isUri ? { uri: url } : images.user}
+        style={styles.profile}
+      />
     </View>
   );
 };
 
 export default function Header({ isHome = true }: { isHome?: boolean }) {
+  const { userProfile } = useUserProfile();
+  const user = userProfile;
   const today = getFormattedDate(new Date());
   const router = useRouter();
 
@@ -43,13 +52,23 @@ export default function Header({ isHome = true }: { isHome?: boolean }) {
             !isHome && { backgroundColor: Colors.bgSecondary },
           ]}
         >
-          <Avatar url={images.user} isHome={isHome} />
+          <Avatar
+            url={user?.img ? user.img : images.user}
+            isUri={!!user?.img}
+            isHome={isHome}
+          />
           <View>
-            <Text style={[styles.userName, !isHome && { color: Colors.black }]}>
-              Kwame Amankwah
+            <Text
+              numberOfLines={1}
+              style={[styles.userName, !isHome && { color: Colors.black }]}
+            >
+              {user?.name}
             </Text>
-            <Text style={[styles.course, !isHome && { color: Colors.black }]}>
-              Computer Science
+            <Text
+              numberOfLines={1}
+              style={[styles.course, !isHome && { color: Colors.black }]}
+            >
+              {user?.course || "N/A"}
             </Text>
           </View>
           <Ionicons
@@ -61,11 +80,17 @@ export default function Header({ isHome = true }: { isHome?: boolean }) {
 
         <View style={styles.iconsContainer}>
           {isHome && (
-            <TouchableOpacity style={styles.icon}>
+            <TouchableOpacity
+              style={styles.icon}
+              onPress={() => router.push("/(protected)/search")}
+            >
               <Ionicons name="search" size={24} color="black" />
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.icon}>
+          <TouchableOpacity
+            style={styles.icon}
+            onPress={() => router.push("/(modal)/notification")}
+          >
             <Ionicons name="notifications" size={24} color="black" />
           </TouchableOpacity>
         </View>

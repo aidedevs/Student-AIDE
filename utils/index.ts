@@ -26,7 +26,9 @@ export const getFormattedDate = (date: Date): string => {
   };
   return new Intl.DateTimeFormat("en-US", options).format(date);
 };
-export const getFormattedFullDate = (date: Date): string => {
+export const getFormattedFullDate = (dateValue: Date | string): string => {
+  const date = new Date(Number(dateValue));
+
   const options: Intl.DateTimeFormatOptions = {
     weekday: "long",
     day: "numeric",
@@ -60,9 +62,9 @@ export function formatDateTime(date: Date): string {
 interface TaskProps {
   completed: boolean;
   subTasks: {
-    id: string | number;
-    title: string;
-    completed: boolean;
+    _id?: string | number;
+    title?: string;
+    completed?: boolean;
   }[];
 }
 export function calculateProgress(task: TaskProps) {
@@ -81,7 +83,7 @@ export function calculateProgress(task: TaskProps) {
 export function checkDueTaskDate(dueDate: Date): number {
   const today = new Date();
 
-  const differenceInTime = dueDate.getTime() - today.getTime();
+  const differenceInTime = dueDate?.getTime() - today?.getTime();
 
   const differenceInDays = Math.ceil(differenceInTime / (1000 * 60 * 60 * 24));
 

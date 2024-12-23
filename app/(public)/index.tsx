@@ -1,12 +1,32 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Theme from "@/constants/Theme";
-import React from "react";
 import images from "@/assets";
+import PrivacyPolicy from "@/components/privacy-policy";
+import TermsAndConditions from "@/components/ters-conditions";
 import { Colors } from "@/constants/Colors";
+import Theme from "@/constants/Theme";
 import { useRouter } from "expo-router";
+import React from "react";
+import {
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeInLeft,
+  FadeInRight,
+  FadeInUp,
+} from "react-native-reanimated";
+
+const AnimatedImage = Animated.createAnimatedComponent(Image);
 
 const OnboardingScreen = () => {
   const router = useRouter();
+  const [showPrivacy, setPrivacy] = React.useState(false);
+  const [showTerms, setTerms] = React.useState(false);
 
   return (
     <View style={styles.container}>
@@ -18,13 +38,26 @@ const OnboardingScreen = () => {
             justifyContent: "space-between",
           }}
         >
-          <Image source={images.paperPlane} style={styles.icon} />
-          <Image source={images.school} style={styles.icon} />
+          <AnimatedImage
+            entering={FadeInUp.duration(1500).delay(500).springify()}
+            source={images.paperPlane}
+            style={styles.icon}
+          />
+          <AnimatedImage
+            entering={FadeInUp.duration(1500).delay(800).springify()}
+            source={images.school}
+            style={styles.icon}
+          />
         </View>
-        <View style={{ paddingVertical: 10 }}>
+
+        <Animated.View
+          style={[{ paddingVertical: 10 }]}
+          entering={FadeIn.duration(500).delay(500).springify()}
+        >
           <Text style={styles.title}>Student AIDE</Text>
           <Text style={styles.subtitle}>e-learning Platform</Text>
-        </View>
+        </Animated.View>
+
         <View
           style={{
             display: "flex",
@@ -32,35 +65,78 @@ const OnboardingScreen = () => {
             justifyContent: "space-between",
           }}
         >
-          <Image source={images.pencil} style={styles.icon} />
-          <Image source={images.globe} style={styles.icon} />
+          <AnimatedImage
+            entering={FadeInLeft.duration(1500).delay(1200).springify()}
+            source={images.pencil}
+            style={styles.icon}
+          />
+          <AnimatedImage
+            entering={FadeInRight.duration(1500).delay(1200).springify()}
+            source={images.globe}
+            style={styles.icon}
+          />
         </View>
-        <View style={{ alignItems: "center", justifyContent: "center" }}>
-          <Image source={images.computer} style={styles.icon} />
-        </View>
+
+        <Animated.View
+          style={[{ alignItems: "center", justifyContent: "center" }]}
+        >
+          <AnimatedImage
+            source={images.computer}
+            style={styles.icon}
+            entering={FadeIn.duration(500).delay(900).springify()}
+          />
+        </Animated.View>
       </View>
 
-      <View style={{ width: "100%", marginTop: 10, paddingHorizontal: 20 }}>
-        {/* Tagline */}
+      <Animated.View
+        entering={FadeInDown.duration(1500).delay(1600).springify()}
+        style={{ width: "100%", marginTop: 10, paddingHorizontal: 20 }}
+      >
         <View style={{ marginBottom: 16 }}>
           <Text style={styles.tagline}>Find yourself by doing</Text>
           <Text style={styles.tagline}>whatever you do!</Text>
         </View>
 
-        {/* Next Button */}
         <TouchableOpacity
           style={styles.nextButton}
-          onPress={() => router.replace("sign-in")}
+          onPress={() => router.replace("/sign-in")}
           activeOpacity={0.5}
         >
-          <Text style={styles.nextButtonText}>Next</Text>
+          <Text style={styles.nextButtonText}>Continue</Text>
         </TouchableOpacity>
 
-        {/* Skip Button */}
-        <TouchableOpacity onPress={() => {}} style={styles.skipButton}>
-          <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={{ alignItems: "center", marginTop: 10 }}>
+          <Text style={{ color: Colors.lightGray2, fontSize: 14 }}>
+            By clicking continue, you agree to the
+          </Text>
+          <TouchableWithoutFeedback onPress={() => setTerms(true)}>
+            <Text
+              style={{
+                color: Colors.primary,
+                fontSize: 14,
+                fontWeight: "bold",
+              }}
+            >
+              • Terms and Conditions
+            </Text>
+          </TouchableWithoutFeedback>
+          <TouchableWithoutFeedback onPress={() => setPrivacy(true)}>
+            <Text
+              style={{
+                color: Colors.primary,
+                fontSize: 14,
+                fontWeight: "bold",
+                marginTop: 8,
+              }}
+            >
+              • Privacy Policy
+            </Text>
+          </TouchableWithoutFeedback>
+        </View>
+      </Animated.View>
+
+      <TermsAndConditions isVisible={showTerms} setVisible={setTerms} />
+      <PrivacyPolicy isVisible={showPrivacy} setVisible={setPrivacy} />
     </View>
   );
 };
@@ -79,7 +155,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "space-around",
     width: "80%",
-    marginBottom: 20,
+    marginBottom: 30,
   },
   icon: {
     width: 60,
@@ -104,7 +180,6 @@ const styles = StyleSheet.create({
     color: "#000",
     textAlign: "center",
     fontWeight: "bold",
-    // marginBottom: 40,
   },
   nextButton: {
     backgroundColor: "#4a2c8a",

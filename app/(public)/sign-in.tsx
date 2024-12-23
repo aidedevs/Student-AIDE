@@ -1,6 +1,7 @@
 import images from "@/assets";
 import { Colors } from "@/constants/Colors";
 import Theme from "@/constants/Theme";
+import { useOAuth } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
@@ -14,6 +15,19 @@ import {
 
 const SignInPage = () => {
   const router = useRouter();
+  const { startOAuthFlow: googleAuth } = useOAuth({ strategy: "oauth_google" });
+
+  const handleGoogleLogin = async () => {
+    try {
+      const { createdSessionId, setActive } = await googleAuth();
+
+      if (createdSessionId) {
+        setActive!({ session: createdSessionId });
+      }
+    } catch (err) {
+      console.error("OAuth error", err);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -33,10 +47,7 @@ const SignInPage = () => {
             </Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => router.replace("/(tabs)/feed")}
-          >
+          <TouchableOpacity style={styles.button} onPress={handleGoogleLogin}>
             <Image source={images.google} style={styles.google} />
             <Text style={styles.text}>Continue with Google</Text>
           </TouchableOpacity>

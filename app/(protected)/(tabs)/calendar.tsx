@@ -1,22 +1,24 @@
-import { sampleEvents } from "@/assets/dummyData";
 import Header from "@/components/header";
 import { HeaderTitle } from "@/components/header-title";
+import Loader from "@/components/loader";
+import NoDataFound from "@/components/no-data-found";
 import { Colors } from "@/constants/Colors";
 import Theme from "@/constants/Theme";
+import { api } from "@/convex/_generated/api";
+import { Doc } from "@/convex/_generated/dataModel";
 import { getFormattedDateByMY } from "@/utils";
-import React from "react";
+import { usePaginatedQuery } from "convex/react";
+import React, { useState } from "react";
 import {
-  StyleSheet,
-  View,
-  Text,
-  ScrollView,
-  SafeAreaView,
-  TouchableOpacity,
   FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// Define types for our data structure
 interface CalendarEvent {
   id: string;
   date: Date;
@@ -25,8 +27,16 @@ interface CalendarEvent {
   description?: string;
 }
 
-interface AcademicCalendarProps {
-  events: CalendarEvent[];
+interface Event {
+  date: number;
+  event: string;
+  type: string;
+  description: string;
+  userId: string;
+}
+
+export interface GroupedData {
+  [date: number]: Event[];
 }
 
 const formatDate = (date: Date): string => {
@@ -41,7 +51,8 @@ const getWeek = (date: Date): string => {
     weekday: "short",
   });
 };
-const getEventColor = (type: CalendarEvent["type"]): string => {
+
+const getEventColor = (type: string): string => {
   switch (type) {
     case "class":
       return "#4CAF50";
@@ -57,28 +68,43 @@ const getEventColor = (type: CalendarEvent["type"]): string => {
 };
 const CalendarPage = () => {
   const { top } = useSafeAreaInsets();
-  const sortedEvents = sampleEvents?.sort(
-    (a, b) => a.date.getTime() - b.date.getTime()
+  const { results, isLoading, loadMore } = usePaginatedQuery(
+    api.academic.getAcademicCalendar,
+    {},
+    { initialNumItems: 5 }
   );
+  const [refreshing, setRefreshing] = useState(false);
 
-  const renderItem = ({ item }: { item: CalendarEvent }) => {
+  const onLoadMore = () => {
+    loadMore(5);
+  };
+  const onRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 2000);
+  };
+
+  const renderItem = ({ item }: { item: Doc<"academicCalendar"> }) => {
     return (
       <TouchableOpacity
         style={styles.eventContainer}
-        onPress={() => console.log("Event pressed:", item.title)}
+        onPress={() => console.log("Event pressed:", item?.event)}
       >
         <View style={styles.dateContainer}>
-          <Text style={styles.dateText}>{formatDate(item?.date)}</Text>
+          <Text style={styles.dateText}>
+            {formatDate(new Date(item?.date!))}
+          </Text>
         </View>
         <View style={styles.eventContent}>
           <View
             style={[
               styles.eventType,
-              { backgroundColor: getEventColor(item?.type) },
+              { backgroundColor: getEventColor(item?.type!) },
             ]}
           />
           <View style={styles.eventDetails}>
-            <Text style={styles.eventTitle}>{item.title}</Text>
+            <Text style={styles.eventTitle}>{item.event}</Text>
             {item.description && (
               <Text style={styles.eventDescription}>{item.description}</Text>
             )}
@@ -87,13 +113,16 @@ const CalendarPage = () => {
       </TouchableOpacity>
     );
   };
+
   return (
     <FlatList
       scrollEventThrottle={16}
       showsVerticalScrollIndicator={false}
-      data={sortedEvents!}
-      keyExtractor={(item) => item.id}
+      data={results}
+      keyExtractor={(item) => item?._id}
       renderItem={renderItem}
+      onEndReached={onLoadMore}
+      onEndReachedThreshold={0.5}
       ListHeaderComponent={
         <>
           <Header isHome={false} />
@@ -129,10 +158,15 @@ const CalendarPage = () => {
           </View>
         </>
       }
+      ListEmptyComponent={isLoading ? <></> : <NoDataFound />}
+      ListFooterComponent={isLoading ? <Loader /> : <></>}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
       contentContainerStyle={{
         paddingVertical: top,
         padding: 20,
-        backgroundColor: Colors.white1,
+        backgroundColor: Colors.white,
         gap: 10,
       }}
     />

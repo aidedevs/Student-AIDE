@@ -1,20 +1,24 @@
-import {
-  AntDesign,
-  FontAwesome,
-  FontAwesome5,
-  Ionicons,
-} from "@expo/vector-icons";
+import { AntDesign, FontAwesome, Ionicons } from "@expo/vector-icons";
+import { Href, Link } from "expo-router";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Link } from "expo-router";
 
 import { icons } from "@/assets";
 import { Colors } from "@/constants/Colors";
 import Theme from "@/constants/Theme";
-import { formatDateTime, getFormattedDateByMDY } from "@/utils";
+import { api } from "@/convex/_generated/api";
+import { Doc, Id } from "@/convex/_generated/dataModel";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { formatDateTime } from "@/utils";
+import { useMutation } from "convex/react";
+import { useState } from "react";
+import DeleteDialog from "./delete-dialog";
 import { Avatar } from "./header";
 
-export const renderItem = ({ item }: { item: any }) => (
-  <Link href={`(modal)/news-event/${item?.id}?cat=event`} asChild>
+type EventProps = {
+  item: Doc<"activities">;
+};
+export const EventCard = ({ item }: EventProps) => (
+  <Link href={`(modal)/news-event/${item?._id}?cat=event` as Href} asChild>
     <TouchableOpacity style={styles.card}>
       <View style={styles.titleDateRow}>
         <Text numberOfLines={2} style={styles.title}>
@@ -22,7 +26,7 @@ export const renderItem = ({ item }: { item: any }) => (
         </Text>
         <View style={styles.dateContainer}>
           <Text style={styles.date}>
-            {getFormattedDateByMDY(item.activity_date)}
+            {new Date(item.activity_date!).toLocaleDateString()}
           </Text>
         </View>
       </View>
@@ -43,28 +47,35 @@ export const renderItem = ({ item }: { item: any }) => (
   </Link>
 );
 
-export const renderNewsItem = ({ item }: { item: any }) => (
-  <Link href={`(modal)/news-event/${item?.id}?cat=news`} asChild>
-    <TouchableOpacity style={styles.cardContainer}>
-      <View style={styles.textContainer}>
-        <Text numberOfLines={1} style={styles.title}>
-          {item.title}
-        </Text>
-        <Text numberOfLines={2} style={styles.description}>
-          {item.description}
-        </Text>
-        <View style={[styles.dateContainer, { marginTop: Theme.SPACING.sm }]}>
-          <Text style={styles.date}>
-            {getFormattedDateByMDY(item.created_at)}
+type NewsProps = {
+  item: Doc<"news">;
+};
+export const NewsCard = ({ item }: NewsProps) => {
+  return (
+    <Link href={`/(modal)/news-event/${item?._id}?cat=news` as Href} asChild>
+      <TouchableOpacity style={styles.cardContainer}>
+        <View style={styles.textContainer}>
+          <Text numberOfLines={1} style={styles.title}>
+            {item.title}
           </Text>
+          <Text numberOfLines={2} style={styles.description}>
+            {item.content}
+          </Text>
+          <View style={[styles.dateContainer, { marginTop: Theme.SPACING.sm }]}>
+            <Text style={styles.date}>
+              {new Date(item?._creationTime).toLocaleDateString()}
+            </Text>
+          </View>
         </View>
-      </View>
-      <Image source={item?.image} style={styles.image} />
-    </TouchableOpacity>
-  </Link>
-);
+        {item?.images && item?.images.length > 0 && (
+          <Image source={{ uri: item?.images[0] }} style={styles.image} />
+        )}
+      </TouchableOpacity>
+    </Link>
+  );
+};
 
-export const renderStudentCenterItem = () => {
+export const StudentCenterItem = () => {
   return (
     <View>
       <View style={styles.rowContainer}>
@@ -99,62 +110,139 @@ export const renderStudentCenterItem = () => {
     </View>
   );
 };
-export const renderArticleCard = ({ item }: { item: any }) => {
+
+type PostCard = {
+  post: Doc<"studentCenters"> & { creator: Doc<"users"> };
+};
+
+export const PostCard = ({ post }: PostCard) => {
+  const [isDialogVisible, setIsDialogVisible] = useState(false);
+  const { userProfile: user } = useUserProfile();
+  const likePost = useMutation(api.studentCenter.likePost);
+  const savePost = useMutation(api.studentCenter.savePost);
+  const deletePost = useMutation(api.studentCenter.deletePostById);
+
+  const createdAt = new Date(post?._creationTime!)?.toString();
+
+  const isLiked = post?.likes?.includes(user?._id!);
+  const isSaved = user?.savedPost?.includes(post?._id);
+
+  const handleDelete = async (id: Id<"studentCenters">) => {
+    await deletePost({ postId: id });
+    setIsDialogVisible(false);
+  };
+
+  const handleCancel = () => {
+    setIsDialogVisible(false);
+  };
+
   return (
-    <Link href={`(modal)/${item?.id}`} asChild>
-      <TouchableOpacity style={styles.articleContainer}>
-        <View style={styles.userInfo}>
-          <Avatar url={item?.user?.img} isHome={false} size={38} />
+    <>
+      <Link
+        key={post?._id}
+        href={`/(modal)/student-center/${post?._id}`}
+        asChild
+      >
+        <TouchableOpacity style={styles.articleContainer}>
+          <View style={styles.headContainer}>
+            <View style={styles.userInfo}>
+              <Avatar url={post?.creator?.img!} isHome={false} size={38} />
+              <View>
+                <Text style={styles.userName}>{post?.creator?.name}</Text>
+                <Text style={styles.articleDate}>
+                  {formatDateTime(new Date(createdAt))}
+                </Text>
+              </View>
+            </View>
+            {post?.creator?._id === user?._id && (
+              <TouchableOpacity onPress={() => setIsDialogVisible(true)}>
+                <Ionicons name="trash-outline" size={20} color="red" />
+              </TouchableOpacity>
+            )}
+          </View>
+          {post?.image && (
+            <View>
+              <Image
+                source={{ uri: post?.image }}
+                style={styles.articleImage}
+              />
+            </View>
+          )}
           <View>
-            <Text style={styles.userName}>{item?.user?.name}</Text>
-            <Text style={styles.articleDate}>
-              {formatDateTime(item?.created_at)}
+            <Text style={styles.title}>{post?.title}</Text>
+            <Text numberOfLines={4} style={styles.description}>
+              {post?.content}
             </Text>
+            <View style={styles.actionButton}>
+              <TouchableOpacity
+                onPress={() => likePost({ postId: post?._id })}
+                style={styles.btnIcon}
+              >
+                <FontAwesome
+                  name={isLiked ? "heart" : "heart-o"}
+                  size={24}
+                  color={Colors.primary}
+                />
+                <Text>{post?.likeCount}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => savePost({ postId: post?._id })}
+                style={styles.btnIcon}
+              >
+                <FontAwesome
+                  name={isSaved ? "bookmark" : "bookmark-o"}
+                  size={24}
+                  color={Colors.paragraph}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-        {item?.image && (
-          <View>
-            <Image source={item?.image} style={styles.articleImage} />
-          </View>
-        )}
-        <View>
-          <Text style={styles.title}>{item?.title}</Text>
-          <Text numberOfLines={4} style={styles.description}>
-            {item?.content}
-          </Text>
-          <View style={styles.actionButton}>
-            <TouchableOpacity style={styles.btnIcon}>
-              <FontAwesome name="heart" size={24} color={Colors.primary} />
-              <Text>5K</Text>
-            </TouchableOpacity>
-            {/* <TouchableOpacity style={styles.btnIcon}>
-              <FontAwesome5 name="comment" size={24} color="black" />
-            </TouchableOpacity> */}
-          </View>
-        </View>
-      </TouchableOpacity>
-    </Link>
+        </TouchableOpacity>
+      </Link>
+
+      <DeleteDialog
+        visible={isDialogVisible}
+        message="Are you sure you want to delete this post?"
+        onDelete={() => handleDelete(post?._id)}
+        onCancel={handleCancel}
+      />
+    </>
   );
 };
 
-export const renderAchievementCard = ({ item }: { item: any }) => {
+export const AchievementCard = ({ post }: PostCard) => {
+  const likePost = useMutation(api.studentCenter.likePost);
+  const createdAt = new Date(post?._creationTime!).toString();
+  const { userProfile: user } = useUserProfile();
+
+  const isLiked = post?.likes?.includes(user?._id!);
+
   return (
-    <Link href={`(modal)/${item?.id}`} asChild>
+    <Link href={`/(modal)/student-center/${post?._id}`} asChild>
       <TouchableOpacity style={styles.articleContainer}>
-        <Image source={item?.image} style={styles.articleImage} />
+        {post?.image && (
+          <Image source={{ uri: post?.image! }} style={styles.articleImage} />
+        )}
 
         <View>
-          <Text style={styles.title}>{item?.title}</Text>
+          <Text style={styles.title}>{post?.title}</Text>
           <Text style={styles.articleDate}>
-            Posted on {formatDateTime(item?.created_at)}
+            Posted on {formatDateTime(new Date(createdAt))}
           </Text>
           <Text numberOfLines={4} style={styles.description}>
-            {item?.content}
+            {post?.content}
           </Text>
           <View style={styles.actionButton}>
-            <TouchableOpacity style={styles.btnIcon}>
-              <FontAwesome name="heart" size={24} color={Colors.primary} />
-              <Text>5K</Text>
+            <TouchableOpacity
+              onPress={() => likePost({ postId: post?._id })}
+              style={styles.btnIcon}
+            >
+              <FontAwesome
+                name={isLiked ? "heart" : "heart-o"}
+                size={24}
+                color={Colors.primary}
+              />
+              <Text>{post?.likeCount}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -162,6 +250,36 @@ export const renderAchievementCard = ({ item }: { item: any }) => {
     </Link>
   );
 };
+
+// const renderCalendarItem = ({ item }: { item: Doc<"academicCalendar"> }) => {
+//   return (
+//     // <TouchableOpacity
+//     //   style={styles.eventContainer}
+//     //   onPress={() => console.log("Event pressed:", item?.event)}
+//     // >
+//     //   <View style={styles.dateContainer}>
+//     //     <Text style={styles.dateText}>
+//     //       {formatDate(new Date(item?.date!))}
+//     //     </Text>
+//     //   </View>
+//     //   <View style={styles.eventContent}>
+//     //     <View
+//     //       style={[
+//     //         styles.eventType,
+//     //         { backgroundColor: getEventColor(item?.type!) },
+//     //       ]}
+//     //     />
+//     //     <View style={styles.eventDetails}>
+//     //       <Text style={styles.eventTitle}>{item.event}</Text>
+//     //       {item.description && (
+//     //         <Text style={styles.eventDescription}>{item.description}</Text>
+//     //       )}
+//     //     </View>
+//     //   </View>
+//     // </TouchableOpacity>
+//   );
+// };
+
 const styles = StyleSheet.create({
   card: {
     padding: 16,
@@ -197,7 +315,8 @@ const styles = StyleSheet.create({
     width: "70%",
   },
   dateContainer: {
-    minWidth: 90,
+    width: 95,
+    // maxWidth: 95,
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderWidth: 1,
@@ -301,6 +420,7 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     gap: 4,
     marginTop: 10,
   },
@@ -312,5 +432,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     gap: 4,
+  },
+  headContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
 });
